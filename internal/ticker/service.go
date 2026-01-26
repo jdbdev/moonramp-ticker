@@ -29,8 +29,6 @@ import (
 	"github.com/jdbdev/moonramp-ticker/internal/coins"
 )
 
-var client = &http.Client{}
-
 // TEMP MAP ONLY. USE DB TABLE FOR ID MAP.
 var coinIDMap []string = []string{"1", "1027", "5994", "20947", "2010", "8916"}
 
@@ -50,7 +48,7 @@ type TickerService struct {
 }
 
 // NewTickerService creates a new instance of the TickerService struct
-func NewTickerService(app *config.AppConfig, coinService coins.CoinInterface, logger *slog.Logger) *TickerService {
+func NewTickerService(app *config.AppConfig, coinService coins.CoinInterface, logger *slog.Logger, client *http.Client) *TickerService {
 	// Validate required dependencies (panic if missing)
 	if app == nil {
 		panic("App configuration required to create TickerService")

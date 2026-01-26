@@ -76,7 +76,7 @@ func main() {
 	if err != nil {
 		logger.Error("Failed getting topcoins", "error", err)
 	} else {
-		logger.Info("Initial top coins: %s", "data", string(initialCoins)) // convert []byte to string for testing only
+		logger.Info("Initial top coins: ", "data", string(initialCoins)) // convert []byte to string for testing only
 	}
 
 	// tickerService calls with context timeout
@@ -85,7 +85,7 @@ func main() {
 	//==========================================================================
 	// Go Routines
 	//==========================================================================
-	tickerCtx, tickerCancel := context.WithTimeout(context.Background())
+	tickerCtx, tickerCancel := context.WithCancel(context.Background())
 	defer tickerCancel()
 	go updateCoinQuotes(tickerCtx, app, logger, services)
 
@@ -117,7 +117,7 @@ func InitConfig(logger *slog.Logger) *config.AppConfig {
 func InitServices(app *config.AppConfig, logger *slog.Logger, client *http.Client) *Services {
 	mapperService := mapper.NewIDMapService(app, logger, client)
 	coinService := coins.NewCoinService(logger)
-	tickerService := ticker.NewTickerService(app, coinService, logger)
+	tickerService := ticker.NewTickerService(app, coinService, logger, client)
 
 	return &Services{
 		Mapper: mapperService,
@@ -145,7 +145,6 @@ func InitDatabase(app *config.AppConfig, logger *slog.Logger) (*db.Database, err
 // Uses two contexts:
 // 1. ctx from main thread called by tickerCancel() when app shuts down.
 // 2. reqCtx with timeout for each API call.
-
 func updateCoinQuotes(ctx context.Context, app *config.AppConfig, logger *slog.Logger, services *Services) {
 	timeInterval := app.Interval.TickerInterval
 	ticker := time.NewTicker(timeInterval) // returns a *time.Ticker channel that reads from the channel C at set interval
@@ -168,7 +167,7 @@ func updateCoinQuotes(ctx context.Context, app *config.AppConfig, logger *slog.L
 			reqCancel() // release resources if API call succeeds
 
 			// DEBUGGING ONLY REMOVE BEFORE PRODUCTION.
-			logger.Info("Response body unmarshalled intoCMCResponse: %+v\n", "data", cmcResponse.Data)
+			logger.Info("Response body unmarshalled intoCMCResponse", "data", cmcResponse.Data)
 
 		}
 
