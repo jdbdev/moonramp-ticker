@@ -45,8 +45,10 @@ func main() {
 	slog.Info("CMC API application starting - Version 0.1")
 	// Initialize applicaiton configuration
 	app := InitConfig(logger)
-	// Initialize http client
-	client := &http.Client{}
+	// Initialize and configure http client
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
 	// Initialize services Mapper, Ticker and Coins. Inject dependencies required.
 	services := InitServices(app, logger, client)
 
