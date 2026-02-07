@@ -16,14 +16,11 @@ package ticker
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
-
-	"encoding/json"
 
 	"github.com/jdbdev/moonramp-ticker/config"
 	"github.com/jdbdev/moonramp-ticker/internal/coins"
@@ -33,8 +30,7 @@ import (
 var coinIDMap []string = []string{"1", "1027", "5994", "20947", "2010", "8916"}
 
 type TickerInterface interface {
-	FetchAndDecodeData(ctx context.Context) (*CMCResponse, error)
-	UpdateDB() error
+	Sync(ctx context.Context) error
 }
 
 type TickerService struct {
@@ -79,8 +75,23 @@ func NewTickerService(app *config.AppConfig, coinService coins.CoinInterface, lo
 	}
 }
 
-// FetchAndDecodeData gets and decodes data from CMC
-func (t *TickerService) FetchAndDecodeData(ctx context.Context) (*CMCResponse, error) {
+// Sync fetches data from CMC API, decodes to JSON and updates the database
+func (t *TickerService) Sync(ctx context.Context) error {
+	// Call and return data from CMC API as []byte
+	data, err := t.CallAPI(ctx)
+	if err != nil {
+		t.logger.Error("failed to fetch and decode data", "error", err)
+		return err
+	}
+	// Decode []byte data into CMCResponse struct
+	myStruct, err := t.DecodeData(data)
+	// Update the database with the new data
+	t.UpdateDB(myStruct)
+	return nil
+}
+
+// CallAPI gets and decodes data from CMC and returns a []byte of the JSON response
+func (t *TickerService) CallAPI(ctx context.Context) ([]byte, error) {
 
 	// Create new request with context
 	req, err := http.NewRequestWithContext(ctx, "GET", t.quotesURL, nil)
@@ -126,33 +137,40 @@ func (t *TickerService) FetchAndDecodeData(ctx context.Context) (*CMCResponse, e
 		return nil, err
 	}
 
-	// Unmarshal JSON response into CMCResponse struct
-	var cmcResponse CMCResponse
-	if err := json.Unmarshal(respBody, &cmcResponse); err != nil {
-		t.logger.Error("failed to unmarshal response", "error", err)
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
-	}
+	return respBody, nil
 
-	// Check for API errors
-	if cmcResponse.Status.ErrorCode != 0 {
-		errorMsg := "API error"
-		if cmcResponse.Status.ErrorMessage != nil {
-			errorMsg = *cmcResponse.Status.ErrorMessage
-		}
-		t.logger.Error("Coinmarketcap API returned error",
-			"error_code", cmcResponse.Status.ErrorCode,
-			"error_message", errorMsg,
-			"credit_count", cmcResponse.Status.CreditCount)
-		return nil, fmt.Errorf("API error (code %d): %s", cmcResponse.Status.ErrorCode, errorMsg)
-	}
+	// // Unmarshal JSON response into CMCResponse struct
+	// var cmcResponse CMCResponse
+	// if err := json.Unmarshal(respBody, &cmcResponse); err != nil {
+	// 	t.logger.Error("failed to unmarshal response", "error", err)
+	// 	return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	// }
 
-	t.logger.Info("Successfully fetched and decoded CMC data",
-		"coins_count", len(cmcResponse.Data),
-		"credit_count", cmcResponse.Status.CreditCount)
-	return &cmcResponse, nil
+	// // Check for API errors
+	// if cmcResponse.Status.ErrorCode != 0 {
+	// 	errorMsg := "API error"
+	// 	if cmcResponse.Status.ErrorMessage != nil {
+	// 		errorMsg = *cmcResponse.Status.ErrorMessage
+	// 	}
+	// 	t.logger.Error("Coinmarketcap API returned error",
+	// 		"error_code", cmcResponse.Status.ErrorCode,
+	// 		"error_message", errorMsg,
+	// 		"credit_count", cmcResponse.Status.CreditCount)
+	// 	return nil, fmt.Errorf("API error (code %d): %s", cmcResponse.Status.ErrorCode, errorMsg)
+	// }
+
+	// t.logger.Info("Successfully fetched and decoded CMC data",
+	// 	"coins_count", len(cmcResponse.Data),
+	// 	"credit_count", cmcResponse.Status.CreditCount)
+	// return &cmcResponse, nil
 }
 
-// UpdateDB updates the database with data from CMC
-func (t *TickerService) UpdateDB() error {
+// DecodeData decodes a JSON[]byte into a CMCResponse struct
+func (t *TickerService) DecodeData(data []byte) (*CMCResponse, error) {
+	return nil, nil
+}
+
+// UpdateDB updates the database with data from CMCResponse struct
+func (t *TickerService) UpdateDB(myStruct *CMCResponse) error {
 	return nil
 }

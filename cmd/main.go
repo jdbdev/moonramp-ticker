@@ -160,16 +160,14 @@ func updateCoinQuotes(ctx context.Context, app *config.AppConfig, logger *slog.L
 		case <-ticker.C: // read from ticker.C channel at set interval
 			// Create a new request context for each API call with timeout
 			reqCtx, reqCancel := context.WithTimeout(ctx, app.CMC.RequestTimeout)
-			cmcResponse, err := services.Ticker.FetchAndDecodeData(reqCtx)
+			err := services.Ticker.Sync(reqCtx)
 			if err != nil {
 				logger.Error("failed to fetch and decode data", "error", err)
 				reqCancel() // release resources if API call fails
 				continue
 			}
+			logger.Info("data synced from CMC API")
 			reqCancel() // release resources if API call succeeds
-
-			// DEBUGGING ONLY REMOVE BEFORE PRODUCTION.
-			logger.Info("Response body unmarshalled intoCMCResponse", "data", cmcResponse.Data)
 
 		}
 
