@@ -26,13 +26,15 @@ import (
 	"github.com/jdbdev/moonramp-ticker/internal/coins"
 )
 
-// TEMP MAP ONLY. USE DB TABLE FOR ID MAP.
+// TEMP SLICE ONLY. USE DB TABLE FOR ID MAP.
 var coinIDMap []string = []string{"1", "1027", "5994", "20947", "2010", "8916"}
 
+// TickerInterface has a singular method for TickerService to orchestrate the sync process from API to DB.
 type TickerInterface interface {
 	Sync(ctx context.Context) error
 }
 
+// TickerService implements the TickerInterface that can sync data from API to DB.
 type TickerService struct {
 	apiKey    string
 	baseURL   string
@@ -85,7 +87,7 @@ func (t *TickerService) Sync(ctx context.Context) error {
 	}
 	// Decode []byte data into CMCResponse struct
 	myStruct, err := t.DecodeData(data)
-	// Update the database with the new data
+	// Update the database with the new data from CMCResponse struct
 	t.UpdateDB(myStruct)
 	return nil
 }
